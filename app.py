@@ -1,4 +1,6 @@
 import os
+from datetime import datetime
+from uuid import uuid4
 import streamlit as st
 from dotenv import load_dotenv
 from modules.ecli_fetcher import haal_uitspraak_op
@@ -381,10 +383,180 @@ with tab2:
 
 with tab3:
     st.header("📚 Casus Uitwerken (OOD 6:162 BW)")
-    st.info(
-        "ℹ️ **Stappenplan functionaliteit** komt in Fase 4.\n\n"
-        "Hier kun je:\n"
-        "- Een juridische casus stap-voor-stap uitwerken\n"
-        "- OOD 6:162 BW (Bijzonder Vermeld Recht) analyseren\n"
-        "- Samenvatting opslaan in de kennisbank"
+    st.markdown(
+        "Werk een casus stap-voor-stap uit volgens OOD 6:162 BW en sla je analyse op."
     )
+
+    st.subheader("🧾 Casus en stappen")
+
+    casus_omschrijving = st.text_area(
+        "Casusomschrijving",
+        placeholder="Beschrijf kort de feiten van de casus...",
+        key="ood_casus"
+    )
+
+    onrechtmatigheid = st.text_area(
+        "Onrechtmatigheid",
+        placeholder="Is het gedrag onrechtmatig? Waarom wel/niet?",
+        key="ood_onrechtmatigheid"
+    )
+    with st.expander("Wat betekent dit?"):
+        st.markdown(
+            "Onrechtmatigheid: schending van een recht, wettelijke plicht of "
+            "maatschappelijke zorgvuldigheidsnorm."
+        )
+
+    toerekenbaarheid = st.text_area(
+        "Toerekenbaarheid",
+        placeholder="Kan het gedrag worden toegerekend aan de dader?",
+        key="ood_toerekenbaarheid"
+    )
+    with st.expander("Wat betekent dit?"):
+        st.markdown(
+            "Toerekenbaarheid: schuld, risico of wettelijk toerekenbare oorzaak."
+        )
+
+    schade = st.text_area(
+        "Schade",
+        placeholder="Welke schade is geleden?",
+        key="ood_schade"
+    )
+    with st.expander("Wat betekent dit?"):
+        st.markdown("Schade: vermogensschade of immateriële schade.")
+
+    causaliteit = st.text_area(
+        "Causaliteit",
+        placeholder="Is er een causaal verband tussen gedrag en schade?",
+        key="ood_causaliteit"
+    )
+    with st.expander("Wat betekent dit?"):
+        st.markdown(
+            "Causaliteit: condicio sine qua non-verband en eventuele toerekening.")
+
+    relativiteit = st.text_area(
+        "Relativiteit",
+        placeholder="Strekt de geschonden norm tot bescherming tegen deze schade?",
+        key="ood_relativiteit"
+    )
+    with st.expander("Wat betekent dit?"):
+        st.markdown(
+            "Relativiteit: art. 6:163 BW — beschermt de norm tegen deze schade?"
+        )
+
+    st.subheader("⚖️ Kelderluik-factoren")
+    st.markdown("Beoordeel elke factor op een schaal van 1 (laag) tot 5 (hoog).")
+
+    kans_onoplettendheid = st.slider(
+        "Kans op onoplettendheid van anderen", 1, 5, 3, key="ood_kans_onoplettendheid"
+    )
+    ernst_gevolgen = st.slider(
+        "Ernst van mogelijke gevolgen", 1, 5, 3, key="ood_ernst_gevolgen"
+    )
+    kans_ongeval = st.slider(
+        "Kans dat ongeval zich voordoet", 1, 5, 3, key="ood_kans_ongeval"
+    )
+    bezwaarlijkheid = st.slider(
+        "Bezwaarlijkheid van veiligheidsmaatregelen", 1, 5, 3, key="ood_bezwaarlijkheid"
+    )
+
+    st.subheader("🧠 Conclusie")
+    conclusie = st.text_area(
+        "Conclusie van je analyse",
+        placeholder="Vat kort samen of aansprakelijkheid aanwezig is.",
+        key="ood_conclusie"
+    )
+
+    if st.button("📝 Analyse tonen", key="ood_analyse_button"):
+        kelderluik_totaal = (
+            kans_onoplettendheid + ernst_gevolgen + kans_ongeval + bezwaarlijkheid
+        )
+
+        samenvatting = {
+            "casus": casus_omschrijving,
+            "onrechtmatigheid": onrechtmatigheid,
+            "toerekenbaarheid": toerekenbaarheid,
+            "schade": schade,
+            "causaliteit": causaliteit,
+            "relativiteit": relativiteit,
+            "kelderluik": {
+                "kans_onoplettendheid": kans_onoplettendheid,
+                "ernst_gevolgen": ernst_gevolgen,
+                "kans_ongeval": kans_ongeval,
+                "bezwaarlijkheid": bezwaarlijkheid,
+                "totaal": kelderluik_totaal
+            },
+            "conclusie": conclusie
+        }
+
+        st.session_state["ood_samenvatting"] = samenvatting
+
+    if "ood_samenvatting" in st.session_state:
+        s = st.session_state["ood_samenvatting"]
+        st.success("✅ Analyse gegenereerd")
+        st.markdown("### 📋 Samenvatting")
+        st.markdown(f"**Casus:** {s.get('casus', '')}")
+        st.markdown(f"**Onrechtmatigheid:** {s.get('onrechtmatigheid', '')}")
+        st.markdown(f"**Toerekenbaarheid:** {s.get('toerekenbaarheid', '')}")
+        st.markdown(f"**Schade:** {s.get('schade', '')}")
+        st.markdown(f"**Causaliteit:** {s.get('causaliteit', '')}")
+        st.markdown(f"**Relativiteit:** {s.get('relativiteit', '')}")
+
+        kl = s.get("kelderluik", {})
+        st.markdown("**Kelderluik-scores:**")
+        st.markdown(
+            f"- Kans op onoplettendheid: {kl.get('kans_onoplettendheid', 0)}\n"
+            f"- Ernst gevolgen: {kl.get('ernst_gevolgen', 0)}\n"
+            f"- Kans ongeval: {kl.get('kans_ongeval', 0)}\n"
+            f"- Bezwaarlijkheid maatregelen: {kl.get('bezwaarlijkheid', 0)}\n"
+            f"- **Totaal:** {kl.get('totaal', 0)}"
+        )
+
+        st.markdown(f"**Conclusie:** {s.get('conclusie', '')}")
+
+        st.divider()
+        st.subheader("💾 Opslaan in kennisbank")
+
+        extra_tags = st.text_input(
+            "Extra tags (optioneel)",
+            placeholder="bijv. ood, aansprakelijkheid",
+            key="ood_tags"
+        )
+
+        if st.button("💾 Opslaan analyse", key="ood_save_button"):
+            tags_lijst = ["ood-analyse"]
+            if extra_tags.strip():
+                tags_lijst.extend([
+                    t.strip() for t in extra_tags.split(",") if t.strip()
+                ])
+
+            unieke_id = uuid4().hex[:8]
+            ecli_ood = f"OOD-{datetime.now().strftime('%Y%m%d')}-{unieke_id}"
+            titel_ood = f"OOD Analyse {datetime.now().strftime('%d-%m-%Y')}"
+
+            data_voor_db = {
+                "ecli": ecli_ood,
+                "titel": titel_ood,
+                "feiten": s.get("casus", ""),
+                "rechtsvraag": "Is er aansprakelijkheid op grond van 6:162 BW?",
+                "overwegingen": (
+                    f"Onrechtmatigheid: {s.get('onrechtmatigheid', '')}\n"
+                    f"Toerekenbaarheid: {s.get('toerekenbaarheid', '')}\n"
+                    f"Schade: {s.get('schade', '')}\n"
+                    f"Causaliteit: {s.get('causaliteit', '')}\n"
+                    f"Relativiteit: {s.get('relativiteit', '')}\n"
+                    f"Kelderluik-scores: {s.get('kelderluik', {})}"
+                ),
+                "dictum": s.get("conclusie", ""),
+                "belang": "Samenvatting van OOD-analyse (6:162 BW).",
+                "wetsartikelen": ["BW 6:162", "BW 6:163"],
+                "eigen_tags": tags_lijst,
+                "eigen_notities": "OOD-analyse"
+            }
+
+            with st.spinner("Opslaan in Supabase..."):
+                save_result = sla_case_brief_op(data_voor_db)
+
+            if save_result["succes"]:
+                st.success("✅ OOD-analyse opgeslagen in kennisbank")
+            else:
+                st.error(f"❌ {save_result['fout']}")
