@@ -1,6 +1,11 @@
+import os
 import streamlit as st
+from dotenv import load_dotenv
 from modules.ecli_fetcher import haal_uitspraak_op
 from modules.ai_samenvatting import genereer_case_brief
+
+# Load .env eerst (voor lokale testing zonder Streamlit secrets)
+load_dotenv()
 
 
 # ── PAGE CONFIG ──────────────────────────────────────────────────────────────

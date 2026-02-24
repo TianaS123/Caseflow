@@ -28,8 +28,9 @@ def haal_secret_op(sleutel: str) -> str:
     """Werkt lokaal via .env én op Streamlit Cloud via st.secrets."""
     try:
         return st.secrets[sleutel]       # Streamlit Cloud
-    except (KeyError, AttributeError):
-        return os.environ.get(sleutel)   # Lokaal
+    except Exception:
+        # Fall back naar .env (KeyError, FileNotFoundError, AttributeError, etc.)
+        return os.environ.get(sleutel, "")   # Lokaal
 
 
 def _maak_supabase_client() -> Client:

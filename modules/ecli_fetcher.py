@@ -13,6 +13,7 @@ import os
 import requests
 import xml.etree.ElementTree as ET
 import streamlit as st
+from urllib.parse import quote
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,7 +21,9 @@ load_dotenv()
 
 # ── Constanten ──────────────────────────────────────────────────────────────
 
-BASE_URL = "https://data.rechtspraak.nl/uitspraken/content"
+# Rechtspraak.nl Open Data API - werkt!
+CONTENT_URL = "https://data.rechtspraak.nl/uitspraken/content"
+
 TIMEOUT_SECONDEN = 15
 MAX_TEKENS = 12000
 
@@ -39,8 +42,9 @@ def haal_secret_op(sleutel: str) -> str:
     """Werkt lokaal via .env én op Streamlit Cloud via st.secrets."""
     try:
         return st.secrets[sleutel]       # Streamlit Cloud
-    except (KeyError, AttributeError):
-        return os.environ.get(sleutel)   # Lokaal
+    except Exception:
+        # Fall back naar .env (KeyError, FileNotFoundError, AttributeError, etc.)
+        return os.environ.get(sleutel, "")   # Lokaal
 
 
 def _bereid_tekst_voor(tekst: str, max_tekens: int = MAX_TEKENS) -> str:
@@ -121,30 +125,42 @@ def haal_uitspraak_op(ecli: str) -> dict:
         return {"succes": False, "fout": "ECLI-nummer moet met 'ECLI:' beginnen."}
     
     try:
-        # HTTP-request naar API
-        url = f"{BASE_URL}?id={ecli}"
+        # HTTP-request naar API — werkend endpoint
+        url = f"{CONTENT_URL}?id={quote(ecli, safe='')}"
+        
         response = requests.get(url, timeout=TIMEOUT_SECONDEN)
-        response.raise_for_status()  # Raise error als status != 2xx
+        
+        if response.status_code == 404:
+            return {
+                "succes": False,
+                "fout": f"ECLI '{ecli}' niet gevonden. "
+                        f"Probeer een ander ECLI-nummer van rechtspraak.nl"
+            }
+        
+        if response.status_code != 200:
+            return {
+                "succes": False,
+                "fout": f"Rechtspraak.nl API error (status {response.status_code})"
+            }
         
         # Parse XML
         root = ET.fromstring(response.content)
         
-        # Zoek <rs:uitspraak> element (namespace-aware)
+        # Het XML-format is: <open-rechtspraak><entry><content><rs:uitspraak>...</rs:uitspraak></content></entry></open-rechtspraak>
+        # Zoek <rs:uitspraak> element in de hele boom
         uitspraak_elem = root.find('.//rs:uitspraak', NAMESPACES)
         
         if uitspraak_elem is None:
-            return {
-                "succes": False,
-                "fout": f"ECLI '{ecli}' niet gevonden. Controleer het nummer."
-            }
-        
-        # Extract tekst uit uitspraak-element
-        tekst = _extract_text_from_xml(uitspraak_elem)
+            # Fallback: probeer naar alle tekst in het XML
+            tekst = _extract_text_from_xml(root)
+        else:
+            # Extract tekst uit uitspraak-element
+            tekst = _extract_text_from_xml(uitspraak_elem)
         
         if not tekst or not tekst.strip():
             return {
                 "succes": False,
-                "fout": "Uitspraaktekst is leeg. Dit kan een API-probleem zijn."
+                "fout": "Uitspraaktekst kon niet worden geëxtraheerd."
             }
         
         # Bereid tekst voor (afkapping)
