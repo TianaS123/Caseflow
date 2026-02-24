@@ -3,6 +3,12 @@ import streamlit as st
 from dotenv import load_dotenv
 from modules.ecli_fetcher import haal_uitspraak_op
 from modules.ai_samenvatting import genereer_case_brief
+from modules.database import (
+    sla_case_brief_op,
+    haal_case_briefs_op,
+    haal_alle_tags_op,
+    haal_case_brief_op_ecli
+)
 
 # Load .env eerst (voor lokale testing zonder Streamlit secrets)
 load_dotenv()
@@ -93,60 +99,282 @@ with tab1:
                     st.error(f"❌ {brief_result['fout']}")
                 else:
                     case_brief = brief_result["data"]
+                    st.session_state["laatste_case_brief"] = case_brief
+                    st.session_state["laatste_ecli"] = ecli
                     st.success("✅ Case Brief gegenereerd!")
-                    
-                    # Stap 3: Toon Case Brief
-                    st.subheader("📋 Case Brief")
-                    st.caption(f"ECLI: `{ecli}`")
-                    
-                    # Twee kolommen voor beter overzicht
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        with st.expander("📌 Feiten", expanded=True):
-                            st.markdown(case_brief.get("feiten", "N/A"))
-                        
-                        with st.expander("👥 Partijen", expanded=True):
-                            st.markdown(case_brief.get("partijen", "N/A"))
-                        
-                        with st.expander("❓ Rechtsvraag", expanded=True):
-                            st.markdown(case_brief.get("rechtsvraag", "N/A"))
-                    
-                    with col2:
-                        with st.expander("💭 Overwegingen", expanded=True):
-                            st.markdown(case_brief.get("overwegingen", "N/A"))
-                        
-                        with st.expander("⚖️ Dictum (Uitspraak)", expanded=True):
-                            st.markdown(case_brief.get("dictum", "N/A"))
-                        
-                        with st.expander("⭐ Juridisch Belang", expanded=True):
-                            st.markdown(case_brief.get("belang", "N/A"))
-                    
-                    # Wetsartikelen
-                    st.divider()
-                    st.subheader("📜 Relevante Wetsartikelen")
-                    wetsartikelen = case_brief.get("wetsartikelen", [])
-                    
-                    if wetsartikelen and len(wetsartikelen) > 0:
-                        cols = st.columns(3)
-                        for idx, artikel in enumerate(wetsartikelen):
-                            with cols[idx % 3]:
-                                st.markdown(f"🔹 {artikel}")
-                    else:
-                        st.info("Geen wetsartikelen geïdentificeerd.")
+
+    # Toon laatste Case Brief uit session state (blijft staan na rerun)
+    laatste_case_brief = st.session_state.get("laatste_case_brief")
+    laatste_ecli = st.session_state.get("laatste_ecli")
+
+    if laatste_case_brief and laatste_ecli:
+        case_brief = laatste_case_brief
+        ecli = laatste_ecli
+
+        # Stap 3: Toon Case Brief
+        st.subheader("📋 Case Brief")
+        st.caption(f"ECLI: `{ecli}`")
+
+        # Twee kolommen voor beter overzicht
+        col1, col2 = st.columns(2)
+
+        with col1:
+            with st.expander("📌 Feiten", expanded=True):
+                st.markdown(case_brief.get("feiten", "N/A"))
+
+            with st.expander("👥 Partijen", expanded=True):
+                st.markdown(case_brief.get("partijen", "N/A"))
+
+            with st.expander("❓ Rechtsvraag", expanded=True):
+                st.markdown(case_brief.get("rechtsvraag", "N/A"))
+
+        with col2:
+            with st.expander("💭 Overwegingen", expanded=True):
+                st.markdown(case_brief.get("overwegingen", "N/A"))
+
+            with st.expander("⚖️ Dictum (Uitspraak)", expanded=True):
+                st.markdown(case_brief.get("dictum", "N/A"))
+
+            with st.expander("⭐ Juridisch Belang", expanded=True):
+                st.markdown(case_brief.get("belang", "N/A"))
+
+        # Wetsartikelen
+        st.divider()
+        st.subheader("📜 Relevante Wetsartikelen")
+        wetsartikelen = case_brief.get("wetsartikelen", [])
+
+        if wetsartikelen and len(wetsartikelen) > 0:
+            cols = st.columns(3)
+            for idx, artikel in enumerate(wetsartikelen):
+                with cols[idx % 3]:
+                    st.markdown(f"🔹 {artikel}")
+        else:
+            st.info("Geen wetsartikelen geïdentificeerd.")
+
+        st.divider()
+
+        # ── Opslaan in kennisbank ───────────────────────────
+        st.subheader("💾 Opslaan in Kennisbank")
+
+        titel_default = f"Uitspraak {ecli}"
+        titel_input = st.text_input(
+            "Titel van de uitspraak",
+            value=titel_default,
+            key="titel_input"
+        )
+
+        tags_input = st.text_input(
+            "Tags (komma-gescheiden)",
+            placeholder="bijv. kelderluik, 6:162 BW, onrechtmatige daad",
+            key="tags_input"
+        )
+
+        notities_input = st.text_area(
+            "Eigen notities (optioneel)",
+            placeholder="Schrijf hier je eigen observaties...",
+            key="notities_input"
+        )
+
+        if st.button("💾 Opslaan in kennisbank", key="save_button"):
+            # Parse tags
+            tags_lijst = [
+                t.strip() for t in tags_input.split(",") if t.strip()
+            ]
+
+            # Als tags/notities leeg zijn, probeer bestaande waarden te behouden
+            bestaande_tags = []
+            bestaande_notities = ""
+            bestaande_resultaat = haal_case_brief_op_ecli(ecli)
+            if bestaande_resultaat["succes"]:
+                bestaande = bestaande_resultaat["data"]
+                bestaande_tags = bestaande.get("eigen_tags", [])
+                bestaande_notities = bestaande.get("eigen_notities", "")
+
+            # Samenvoegen: bestaande tags + nieuwe tags (uniek)
+            if bestaande_tags:
+                tags_lijst = sorted(list(set(bestaande_tags + tags_lijst)))
+
+            # Notities samenvoegen (oude + nieuwe, gescheiden)
+            if notities_input.strip() and bestaande_notities:
+                notities_input = f"{bestaande_notities}\n\n---\n{notities_input.strip()}"
+            elif bestaande_notities and not notities_input.strip():
+                notities_input = bestaande_notities
+
+            # Bouw data voor database
+            data_voor_db = {
+                "ecli": ecli,
+                "titel": titel_input.strip() if titel_input else titel_default,
+                "feiten": case_brief.get("feiten", ""),
+                "partijen": case_brief.get("partijen", ""),
+                "rechtsvraag": case_brief.get("rechtsvraag", ""),
+                "overwegingen": case_brief.get("overwegingen", ""),
+                "dictum": case_brief.get("dictum", ""),
+                "belang": case_brief.get("belang", ""),
+                "wetsartikelen": case_brief.get("wetsartikelen", []),
+                "eigen_tags": tags_lijst,
+                "eigen_notities": notities_input.strip()
+            }
+
+            with st.spinner("Opslaan in Supabase..."):
+                save_result = sla_case_brief_op(data_voor_db)
+
+            if save_result["succes"]:
+                st.success("✅ Opgeslagen in de kennisbank!")
+            else:
+                st.error(f"❌ {save_result['fout']}")
 
 
 # ── TAB 2: KENNISBANK ────────────────────────────────────────────────────────
 
 with tab2:
     st.header("🔍 Kennisbank Doorzoeken")
-    st.info(
-        "ℹ️ **Kennisbank functionaliteit** komt in Fase 3.\n\n"
-        "Hier kun je:\n"
-        "- Opgeslagen uitspraken zoeken\n"
-        "- Filteren op tags\n"
-        "- Notities toevoegen"
+    st.markdown("Zoek in je opgeslagen uitspraken en filter op tags.")
+
+    # Zoekveld en filters
+    zoekterm = st.text_input(
+        "Zoekterm",
+        placeholder="bijv. kelderluik, onrechtmatige daad, 6:162 BW",
+        key="zoekterm_input"
     )
+
+    # Tags ophalen voor filter
+    tags_result = haal_alle_tags_op()
+    beschikbare_tags = tags_result["data"] if tags_result["succes"] else []
+
+    tags_filter = st.multiselect(
+        "Filter op tags",
+        options=beschikbare_tags,
+        default=[],
+        key="tags_filter"
+    )
+
+    def _toon_case_briefs(case_briefs):
+        if len(case_briefs) == 0:
+            st.info("Geen uitspraken gevonden.")
+            return
+
+        st.success(f"✅ {len(case_briefs)} uitspraak(en) gevonden")
+
+        for brief in case_briefs:
+            titel = brief.get("titel", "Onbekende titel")
+            ecli = brief.get("ecli", "Onbekend ECLI")
+
+            with st.expander(f"{titel} — {ecli}"):
+                st.markdown(f"**ECLI:** {ecli}")
+                st.markdown(f"**Titel:** {titel}")
+
+                # Link naar Rechtspraak.nl
+                rechtspraak_url = (
+                    f"https://uitspraken.rechtspraak.nl/#!/details?id={ecli}"
+                )
+                st.markdown(
+                    f"[Open uitspraak op Rechtspraak.nl]({rechtspraak_url})"
+                )
+
+                if brief.get("eigen_tags"):
+                    st.markdown(
+                        "**Tags:** " + ", ".join(brief["eigen_tags"])
+                    )
+
+                if brief.get("eigen_notities"):
+                    st.markdown("**Notities:**")
+                    st.markdown(brief["eigen_notities"])
+
+                st.divider()
+
+                st.markdown("**Feiten**")
+                st.markdown(brief.get("feiten", ""))
+
+                st.markdown("**Partijen**")
+                st.markdown(brief.get("partijen", ""))
+
+                st.markdown("**Rechtsvraag**")
+                st.markdown(brief.get("rechtsvraag", ""))
+
+                st.markdown("**Overwegingen**")
+                st.markdown(brief.get("overwegingen", ""))
+
+                st.markdown("**Dictum**")
+                st.markdown(brief.get("dictum", ""))
+
+                st.markdown("**Juridisch belang**")
+                st.markdown(brief.get("belang", ""))
+
+                wetsartikelen = brief.get("wetsartikelen", [])
+                if wetsartikelen:
+                    st.markdown(
+                        "**Wetsartikelen:** " + ", ".join(wetsartikelen)
+                    )
+
+                st.divider()
+
+                # Bewerken: tags en notities
+                st.markdown("**Tags & notities bewerken**")
+
+                tags_waarde = ", ".join(brief.get("eigen_tags", []))
+                tags_bewerkt = st.text_input(
+                    "Tags (komma-gescheiden)",
+                    value=tags_waarde,
+                    key=f"tags_bewerk_{ecli}"
+                )
+
+                notities_bewerkt = st.text_area(
+                    "Notities",
+                    value=brief.get("eigen_notities", ""),
+                    key=f"notities_bewerk_{ecli}"
+                )
+
+                if st.button("💾 Wijzigingen opslaan", key=f"save_{ecli}"):
+                    tags_lijst = [
+                        t.strip() for t in tags_bewerkt.split(",") if t.strip()
+                    ]
+
+                    bijgewerkt = {
+                        "ecli": ecli,
+                        "titel": titel,
+                        "feiten": brief.get("feiten", ""),
+                        "partijen": brief.get("partijen", ""),
+                        "rechtsvraag": brief.get("rechtsvraag", ""),
+                        "overwegingen": brief.get("overwegingen", ""),
+                        "dictum": brief.get("dictum", ""),
+                        "belang": brief.get("belang", ""),
+                        "wetsartikelen": brief.get("wetsartikelen", []),
+                        "eigen_tags": tags_lijst,
+                        "eigen_notities": notities_bewerkt.strip()
+                    }
+
+                    with st.spinner("Wijzigingen opslaan..."):
+                        update_result = sla_case_brief_op(bijgewerkt)
+
+                    if update_result["succes"]:
+                        st.success("✅ Wijzigingen opgeslagen")
+                        # Update direct in UI
+                        brief["eigen_tags"] = tags_lijst
+                        brief["eigen_notities"] = notities_bewerkt.strip()
+                        st.session_state["laatste_zoekresultaten"] = case_briefs
+                    else:
+                        st.error(f"❌ {update_result['fout']}")
+
+    zoek_clicked = st.button("🔎 Zoeken", key="zoek_button")
+
+    if zoek_clicked:
+        with st.spinner("Zoeken in kennisbank..."):
+            resultaat = haal_case_briefs_op(
+                zoekterm=zoekterm,
+                tags_filter=tags_filter,
+                limit=50
+            )
+
+        if not resultaat["succes"]:
+            st.error(f"❌ {resultaat['fout']}")
+        else:
+            case_briefs = resultaat["data"]
+            st.session_state["laatste_zoekresultaten"] = case_briefs
+            _toon_case_briefs(case_briefs)
+
+    # Toon laatst gevonden resultaten als er niet net gezocht is
+    if (not zoek_clicked) and "laatste_zoekresultaten" in st.session_state:
+        _toon_case_briefs(st.session_state["laatste_zoekresultaten"])
 
 
 # ── TAB 3: STAPPENPLAN ───────────────────────────────────────────────────────

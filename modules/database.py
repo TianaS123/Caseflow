@@ -155,17 +155,18 @@ def haal_case_briefs_op(
         # Filter 1: Zoekterm
         if zoekterm and zoekterm.strip():
             zoekterm = zoekterm.strip().lower()
-            # Voer search uit op meerdere velden
+            # Voer search uit op meerdere velden + tags
             # Supabase ondersteunt text_search maar we gebruiken ilike (case-insensitive like)
-            query = (
-                query.or_(
-                    f"titel.ilike.%{zoekterm}%,"
-                    f"feiten.ilike.%{zoekterm}%,"
-                    f"rechtsvraag.ilike.%{zoekterm}%,"
-                    f"overwegingen.ilike.%{zoekterm}%,"
-                    f"belang.ilike.%{zoekterm}%"
-                )
+            or_filter = (
+                f"eigen_tags.cs.{{{zoekterm}}},"
+                f"titel.ilike.%{zoekterm}%,"
+                f"feiten.ilike.%{zoekterm}%,"
+                f"rechtsvraag.ilike.%{zoekterm}%,"
+                f"overwegingen.ilike.%{zoekterm}%,"
+                f"belang.ilike.%{zoekterm}%,"
+                f"eigen_notities.ilike.%{zoekterm}%"
             )
+            query = query.or_("".join(or_filter))
         
         # Filter 2: Tags
         if tags_filter and len(tags_filter) > 0:
@@ -199,6 +200,39 @@ def haal_case_briefs_op(
             fout = f"Database error: {error_msg}"
         
         return {"succes": False, "fout": fout}
+
+
+def haal_case_brief_op_ecli(ecli: str) -> dict:
+    """
+    Haalt één case brief op via ECLI.
+    
+    Args:
+        ecli: ECLI-nummer
+    
+    Returns:
+        {"succes": True, "data": case_brief} of
+        {"succes": False, "fout": "..."}
+    """
+    if not ecli:
+        return {"succes": False, "fout": "ECLI-nummer is verplicht."}
+
+    try:
+        client = _maak_supabase_client()
+        response = (
+            client.table(TABEL)
+            .select("*")
+            .eq("ecli", ecli)
+            .limit(1)
+            .execute()
+        )
+
+        if not response.data:
+            return {"succes": False, "fout": "Geen case brief gevonden."}
+
+        return {"succes": True, "data": response.data[0]}
+
+    except Exception as e:
+        return {"succes": False, "fout": f"Ophalen mislukt: {str(e)}"}
 
 
 def haal_alle_tags_op() -> dict:
