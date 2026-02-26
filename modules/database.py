@@ -2,13 +2,21 @@
 Database — Supabase PostgreSQL koppeling voor case briefs opslag.
 
 Aanroepen:
-    from modules.database import sla_case_brief_op, haal_case_briefs_op
-    
+    from modules.database import (
+        sla_case_brief_op, haal_case_briefs_op,
+        haal_top_tags_op, login_gebruiker, registreer_gebruiker,
+        uitloggen, haal_huidige_gebruiker_op
+    )
+
     resultaat = sla_case_brief_op(case_brief_data)
     if resultaat["succes"]:
         print(f"Opgeslagen met ID: {resultaat['data']['id']}")
-    
+
     resultaat = haal_case_briefs_op(zoekterm="kelderluik")
+
+    resultaat = login_gebruiker("email@voorbeeld.nl", "wachtwoord123")
+    if resultaat["succes"]:
+        gebruiker = resultaat["data"]
 """
 
 import os
@@ -267,20 +275,174 @@ def haal_alle_tags_op() -> dict:
         }
 
 
+def haal_top_tags_op(limit: int = 5) -> dict:
+    """
+    Haalt de meest gebruikte tags op (gesorteerd op frequentie).
+
+    Args:
+        limit: Aantal tags om terug te geven (default 5)
+
+    Returns:
+        {"succes": True, "data": ["tag1", "tag2", ...]} of
+        {"succes": False, "fout": "..."}
+    """
+    try:
+        client = _maak_supabase_client()
+        response = client.table(TABEL).select("eigen_tags").execute()
+
+        # Tel frequentie van elke tag
+        tag_teller: dict = {}
+        for record in response.data:
+            for tag in (record.get("eigen_tags") or []):
+                tag_teller[tag] = tag_teller.get(tag, 0) + 1
+
+        # Sorteer op frequentie (hoog naar laag) en neem top N
+        gesorteerd = sorted(tag_teller.items(), key=lambda x: x[1], reverse=True)
+        top_tags = [tag for tag, _ in gesorteerd[:limit]]
+
+        return {"succes": True, "data": top_tags}
+
+    except Exception as e:
+        return {"succes": False, "fout": f"Kan top tags niet ophalen: {str(e)}"}
+
+
+def _maak_auth_client() -> Client:
+    """
+    Maakt een Supabase client met herstelde auth-sessie uit Streamlit session state.
+    Gebruik dit voor geverifieerde database-operaties.
+    """
+    client = _maak_supabase_client()
+    access_token = st.session_state.get("auth_access_token")
+    refresh_token = st.session_state.get("auth_refresh_token", "")
+    if access_token:
+        try:
+            client.auth.set_session(access_token, refresh_token)
+        except Exception:
+            pass  # Verlopen sessie — anoniem blijven
+    return client
+
+
+def login_gebruiker(email: str, wachtwoord: str) -> dict:
+    """
+    Logt een gebruiker in via Supabase Auth.
+
+    Args:
+        email: E-mailadres van de gebruiker
+        wachtwoord: Wachtwoord van de gebruiker
+
+    Returns:
+        {"succes": True, "data": {"email": ..., "access_token": ..., "refresh_token": ...}} of
+        {"succes": False, "fout": "..."}
+    """
+    try:
+        client = _maak_supabase_client()
+        response = client.auth.sign_in_with_password(
+            {"email": email, "password": wachtwoord}
+        )
+
+        if not response.session:
+            return {"succes": False, "fout": "Login mislukt. Controleer je e-mail en wachtwoord."}
+
+        return {
+            "succes": True,
+            "data": {
+                "email": response.user.email,
+                "access_token": response.session.access_token,
+                "refresh_token": response.session.refresh_token
+            }
+        }
+    except Exception as e:
+        error_msg = str(e)
+        if "Invalid login credentials" in error_msg:
+            fout = "Onjuist e-mailadres of wachtwoord."
+        elif "Email not confirmed" in error_msg:
+            fout = "E-mailadres nog niet bevestigd. Controleer je inbox."
+        else:
+            fout = f"Inloggen mislukt: {error_msg}"
+        return {"succes": False, "fout": fout}
+
+
+def registreer_gebruiker(email: str, wachtwoord: str) -> dict:
+    """
+    Registreert een nieuwe gebruiker via Supabase Auth.
+
+    Args:
+        email: E-mailadres van de nieuwe gebruiker
+        wachtwoord: Wachtwoord (minimaal 6 tekens)
+
+    Returns:
+        {"succes": True, "data": {"bevestiging_vereist": bool}} of
+        {"succes": False, "fout": "..."}
+    """
+    if len(wachtwoord) < 6:
+        return {"succes": False, "fout": "Wachtwoord moet minimaal 6 tekens bevatten."}
+
+    try:
+        client = _maak_supabase_client()
+        response = client.auth.sign_up(
+            {"email": email, "password": wachtwoord}
+        )
+        bevestiging_vereist = response.session is None
+
+        return {
+            "succes": True,
+            "data": {"bevestiging_vereist": bevestiging_vereist}
+        }
+    except Exception as e:
+        error_msg = str(e)
+        if "already registered" in error_msg or "already exists" in error_msg:
+            fout = "Dit e-mailadres is al geregistreerd."
+        else:
+            fout = f"Registratie mislukt: {error_msg}"
+        return {"succes": False, "fout": fout}
+
+
+def uitloggen() -> dict:
+    """
+    Logt de huidige gebruiker uit via Supabase Auth.
+
+    Returns:
+        {"succes": True} of {"succes": False, "fout": "..."}
+    """
+    try:
+        client = _maak_auth_client()
+        client.auth.sign_out()
+        return {"succes": True}
+    except Exception as e:
+        return {"succes": False, "fout": f"Uitloggen mislukt: {str(e)}"}
+
+
+def haal_huidige_gebruiker_op() -> dict:
+    """
+    Haalt de huidige ingelogde gebruiker op uit de Supabase-sessie.
+
+    Returns:
+        {"succes": True, "data": {"email": "..."}} of {"succes": False, "fout": "..."}
+    """
+    try:
+        client = _maak_auth_client()
+        response = client.auth.get_user()
+        if response and response.user:
+            return {"succes": True, "data": {"email": response.user.email}}
+        return {"succes": False, "fout": "Geen actieve sessie."}
+    except Exception as e:
+        return {"succes": False, "fout": f"Gebruiker ophalen mislukt: {str(e)}"}
+
+
 def verwijder_case_brief(ecli: str) -> dict:
     """
     Verwijdert een case brief uit de database.
-    
+
     Args:
         ecli: ECLI-nummer van de case brief
-    
+
     Returns:
         {"succes": True, "data": deleted_record} of
         {"succes": False, "fout": "..."}
     """
     try:
         client = _maak_supabase_client()
-        
+
         response = client.table(TABEL).delete().eq("ecli", ecli).execute()
         
         return {

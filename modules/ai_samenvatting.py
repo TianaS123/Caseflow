@@ -2,11 +2,15 @@
 AI Samenvatting — Analyseert uitspraken met Groq/Llama 3.3 70B.
 
 Aanroepen:
-    from modules.ai_samenvatting import genereer_case_brief
-    
+    from modules.ai_samenvatting import genereer_case_brief, stel_vraag_over_uitspraak
+
     resultaat = genereer_case_brief(uitspraak_tekst, ecli)
     if resultaat["succes"]:
         case_brief = resultaat["data"]
+
+    resultaat = stel_vraag_over_uitspraak(uitspraak_tekst, ecli, "Is er sprake van eigen schuld?")
+    if resultaat["succes"]:
+        antwoord = resultaat["data"]
 """
 
 import os
@@ -180,4 +184,93 @@ def genereer_case_brief(tekst: str, ecli: str) -> dict:
         else:
             fout = f"Groq API error: {error_msg}"
         
+        return {"succes": False, "fout": fout}
+
+
+def stel_vraag_over_uitspraak(tekst: str, ecli: str, vraag: str) -> dict:
+    """
+    Beantwoordt een ja/nee-vraag over een uitspraak.
+
+    Args:
+        tekst: Volledige uitspraaktekst
+        ecli: ECLI-nummer voor referentie
+        vraag: De ja/nee-vraag van de gebruiker
+
+    Returns:
+        {"succes": True, "data": {
+            "antwoord": "Ja" of "Nee",
+            "rechtsoverweging_nr": "r.o. 4.3",
+            "citaat": "exact citaat uit uitspraak",
+            "toelichting": "korte juridische toelichting"
+        }} of
+        {"succes": False, "fout": "begrijpelijke melding"}
+    """
+    if not tekst or not tekst.strip():
+        return {"succes": False, "fout": "Uitspraaktekst is leeg."}
+    if not vraag or not vraag.strip():
+        return {"succes": False, "fout": "Voer een vraag in."}
+
+    try:
+        client = _maak_groq_client()
+
+        systeem_prompt = """Je bent een juridische assistent gespecialiseerd in Nederlands recht.
+Beantwoord de ja/nee-vraag over de gegeven uitspraak op basis van de tekst.
+
+Geef ALTIJD een JSON terug met exact deze velden:
+{
+    "antwoord": "Ja" of "Nee",
+    "rechtsoverweging_nr": "bijv. r.o. 4.3 of overweging 5.2 (leeg als niet van toepassing)",
+    "citaat": "letterlijk citaat uit de uitspraak dat het antwoord onderbouwt",
+    "toelichting": "korte juridische toelichting (1-2 zinnen) waarom ja of nee"
+}
+
+VEREIST:
+- Antwoord UITSLUITEND in JSON-formaat, niets anders
+- Alle velden in het Nederlands
+- Citaat is een letterlijk citaat uit de uitspraak, geen parafrase
+- Als het antwoord niet in de uitspraak te vinden is, zeg dan Nee met toelichting"""
+
+        gebruiker_prompt = f"""Uitspraak (ECLI: {ecli}):
+{tekst[:8000]}
+
+Vraag: {vraag.strip()}"""
+
+        completion = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": systeem_prompt},
+                {"role": "user", "content": gebruiker_prompt}
+            ],
+            temperature=0.1,
+            max_tokens=600,
+            response_format={"type": "json_object"}
+        )
+
+        response_text = completion.choices[0].message.content
+        resultaat = json.loads(response_text)
+
+        verplichte = ["antwoord", "rechtsoverweging_nr", "citaat", "toelichting"]
+        missend = [v for v in verplichte if v not in resultaat]
+        if missend:
+            return {
+                "succes": False,
+                "fout": f"Antwoord mist velden: {', '.join(missend)}"
+            }
+
+        return {"succes": True, "data": resultaat}
+
+    except json.JSONDecodeError:
+        return {"succes": False, "fout": "AI gaf geen geldig antwoord terug."}
+    except ValueError as e:
+        return {"succes": False, "fout": f"API-configuratie fout: {str(e)}"}
+    except Exception as e:
+        error_msg = str(e)
+        if "401" in error_msg or "Unauthorized" in error_msg:
+            fout = "GROQ_API_KEY is ongeldig. Controleer je .env-bestand."
+        elif "429" in error_msg or "rate limit" in error_msg.lower():
+            fout = "Groq rate limit bereikt. Probeer over enkele seconden opnieuw."
+        elif "timeout" in error_msg.lower():
+            fout = "AI-verwerking duurde te lang. Probeer opnieuw."
+        else:
+            fout = f"Groq API error: {error_msg}"
         return {"succes": False, "fout": fout}
