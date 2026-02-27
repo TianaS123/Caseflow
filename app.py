@@ -26,10 +26,292 @@ load_dotenv()
 # ── PAGE CONFIG ───────────────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="Juridische Werkbank",
+    page_title="Caseflow",
     page_icon="⚖️",
     layout="wide"
 )
+
+# ── CUSTOM CSS — Editorial Legal Design ──────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+
+/* ── CSS Variabelen ── */
+:root {
+    --cf-navy: #0a1628;
+    --cf-navy-light: #111d33;
+    --cf-navy-mid: #162240;
+    --cf-gold: #c9a227;
+    --cf-gold-light: #e8c84a;
+    --cf-gold-dim: rgba(201, 162, 39, 0.12);
+    --cf-text: #e8e6e1;
+    --cf-text-muted: #8e99a9;
+    --cf-surface: #0f1a2e;
+    --cf-border: rgba(201, 162, 39, 0.15);
+    --cf-radius: 12px;
+    --cf-shadow: 0 2px 16px rgba(0,0,0,0.25);
+}
+
+/* ── Basis ── */
+.stApp {
+    background: linear-gradient(165deg, var(--cf-navy) 0%, #0d1f3c 40%, var(--cf-navy) 100%) !important;
+    color: var(--cf-text) !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ── Typografie ── */
+h1, h2, h3, .stTabs [data-baseweb="tab"] {
+    font-family: 'DM Serif Display', serif !important;
+    color: var(--cf-text) !important;
+    letter-spacing: -0.02em;
+}
+
+h1 {
+    font-size: 2.6rem !important;
+    background: linear-gradient(135deg, var(--cf-gold) 0%, var(--cf-gold-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    padding-bottom: 0.2em;
+}
+
+h2 {
+    font-size: 1.6rem !important;
+    border-bottom: 2px solid var(--cf-border);
+    padding-bottom: 0.4em;
+    margin-bottom: 1em;
+}
+
+h3 { font-size: 1.25rem !important; }
+
+p, li, label, .stMarkdown, .stCaption, span {
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, var(--cf-navy-light) 0%, var(--cf-navy) 100%) !important;
+    border-right: 1px solid var(--cf-border) !important;
+}
+
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    color: var(--cf-gold) !important;
+    -webkit-text-fill-color: var(--cf-gold) !important;
+    background: none !important;
+    font-size: 1.2rem !important;
+}
+
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"] {
+    background: var(--cf-navy-mid) !important;
+    border-radius: var(--cf-radius) !important;
+    padding: 4px !important;
+    gap: 4px;
+    border: 1px solid var(--cf-border) !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    color: var(--cf-text-muted) !important;
+    transition: all 0.2s ease !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background: var(--cf-gold-dim) !important;
+    color: var(--cf-gold) !important;
+    border-bottom: none !important;
+}
+
+.stTabs [data-baseweb="tab-highlight"] {
+    display: none !important;
+}
+
+.stTabs [data-baseweb="tab-border"] {
+    display: none !important;
+}
+
+/* ── Knoppen ── */
+.stButton > button {
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--cf-border) !important;
+    background: var(--cf-navy-mid) !important;
+    color: var(--cf-text) !important;
+    padding: 0.5rem 1.2rem !important;
+    transition: all 0.25s ease !important;
+    letter-spacing: 0.01em;
+}
+
+.stButton > button:hover {
+    background: var(--cf-gold-dim) !important;
+    border-color: var(--cf-gold) !important;
+    color: var(--cf-gold-light) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(201, 162, 39, 0.15) !important;
+}
+
+.stButton > button[kind="primary"],
+button[kind="primary"] {
+    background: linear-gradient(135deg, var(--cf-gold) 0%, #b8922a 100%) !important;
+    color: var(--cf-navy) !important;
+    border: none !important;
+    font-weight: 700 !important;
+}
+
+.stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, var(--cf-gold-light) 0%, var(--cf-gold) 100%) !important;
+    color: var(--cf-navy) !important;
+}
+
+/* ── Input-velden ── */
+.stTextInput > div > div,
+.stTextArea > div > div,
+.stSelectbox > div > div,
+.stMultiSelect > div > div {
+    background: var(--cf-navy-mid) !important;
+    border: 1px solid var(--cf-border) !important;
+    border-radius: 8px !important;
+    color: var(--cf-text) !important;
+    transition: border-color 0.2s ease !important;
+}
+
+.stTextInput > div > div:focus-within,
+.stTextArea > div > div:focus-within {
+    border-color: var(--cf-gold) !important;
+    box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.1) !important;
+}
+
+/* ── Expanders ── */
+.streamlit-expanderHeader {
+    font-family: 'DM Serif Display', serif !important;
+    font-size: 1.05rem !important;
+    background: var(--cf-navy-mid) !important;
+    border: 1px solid var(--cf-border) !important;
+    border-radius: var(--cf-radius) !important;
+    padding: 0.8em 1em !important;
+    transition: all 0.2s ease !important;
+}
+
+.streamlit-expanderHeader:hover {
+    border-color: var(--cf-gold) !important;
+}
+
+.streamlit-expanderContent {
+    background: rgba(15, 26, 46, 0.6) !important;
+    border: 1px solid var(--cf-border) !important;
+    border-top: none !important;
+    border-radius: 0 0 var(--cf-radius) var(--cf-radius) !important;
+    padding: 1em !important;
+}
+
+/* ── Alerts (success, error, warning, info) ── */
+.stAlert {
+    border-radius: 8px !important;
+    border-left: 4px solid var(--cf-gold) !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ── Metrics ── */
+[data-testid="stMetric"] {
+    background: var(--cf-navy-mid) !important;
+    border: 1px solid var(--cf-border) !important;
+    border-radius: var(--cf-radius) !important;
+    padding: 1em !important;
+    text-align: center;
+}
+
+[data-testid="stMetricValue"] {
+    font-family: 'DM Serif Display', serif !important;
+    color: var(--cf-gold) !important;
+    font-size: 2rem !important;
+}
+
+/* ── Divider ── */
+hr {
+    border-color: var(--cf-border) !important;
+    opacity: 0.5;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--cf-navy); }
+::-webkit-scrollbar-thumb { background: var(--cf-navy-mid); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cf-gold); }
+
+/* ── Radio buttons ── */
+.stRadio > div {
+    gap: 0.3rem;
+}
+
+.stRadio [role="radiogroup"] label {
+    background: var(--cf-navy-mid) !important;
+    border: 1px solid var(--cf-border) !important;
+    border-radius: 8px !important;
+    padding: 6px 16px !important;
+    transition: all 0.2s ease !important;
+}
+
+.stRadio [role="radiogroup"] label:hover {
+    border-color: var(--cf-gold) !important;
+}
+
+/* ── Sliders ── */
+.stSlider [data-baseweb="slider"] [role="slider"] {
+    background: var(--cf-gold) !important;
+}
+
+.stSlider [data-baseweb="slider"] div[data-testid="stTickBarMin"],
+.stSlider [data-baseweb="slider"] div[data-testid="stTickBarMax"] {
+    color: var(--cf-text-muted) !important;
+}
+
+/* ── Download button ── */
+.stDownloadButton > button {
+    background: var(--cf-gold-dim) !important;
+    border: 1px solid var(--cf-gold) !important;
+    color: var(--cf-gold-light) !important;
+}
+
+/* ── Code blocks ── */
+.stCodeBlock {
+    border: 1px solid var(--cf-border) !important;
+    border-radius: var(--cf-radius) !important;
+}
+
+/* ── Spinner ── */
+.stSpinner > div {
+    border-top-color: var(--cf-gold) !important;
+}
+
+/* ── Animatie: fade-in bij laden ── */
+@keyframes cfFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.main .block-container {
+    animation: cfFadeIn 0.4s ease-out;
+    max-width: 1100px;
+}
+
+/* ── Subtiele grain-overlay voor diepte ── */
+.stApp::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
 # ── HULPFUNCTIES ──────────────────────────────────────────────────────────────
@@ -218,15 +500,15 @@ with st.sidebar:
         st.caption("Geen account? Gebruik 'Registreren' om er een aan te maken.")
 
     st.divider()
-    st.caption("⚖️ Juridische Werkbank v0.4")
+    st.caption("⚖️ Caseflow v0.5")
 
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
 
-st.title("⚖️ Juridische Werkbank")
+st.title("⚖️ Caseflow")
 st.markdown(
-    "Gratis web-app voor Nederlandse rechtsstudenten. "
-    "Rechtsuitsspraken begrijpen, opslaan en toepassen."
+    "Gratis web-app voor Nederlandse rechtsstudenten — "
+    "uitspraken begrijpen, opslaan en toepassen."
 )
 
 # Tabs
@@ -932,7 +1214,7 @@ with tab4:
 
     # ── Documentatie ──
     if admin_sectie == "📖 Documentatie":
-        st.subheader("📖 Handleiding Juridische Werkbank")
+        st.subheader("📖 Handleiding Caseflow")
         st.markdown("""
 ### 📄 Tab 1 — Nieuwe Uitspraak
 1. Voer een ECLI-nummer in (bijv. `ECLI:NL:HR:2002:AE7040`)
@@ -973,6 +1255,17 @@ with tab4:
         st.subheader("📋 Wijzigingen")
 
         wijzigingen = [
+            {
+                "versie": "0.5",
+                "datum": "Februari 2026",
+                "items": [
+                    "Rebranding: Juridische Werkbank → Caseflow",
+                    "Volledig nieuw design: Editorial Legal thema met DM Serif Display + DM Sans",
+                    "Custom kleurschema: deep navy + warm gold accent",
+                    "Verbeterde UI: geanimeerde fade-in, verfijnde kaarten, gepolijste knoppen",
+                    "Subtiele textuur-overlay voor visuele diepte",
+                ]
+            },
             {
                 "versie": "0.4",
                 "datum": "Februari 2026",
@@ -1022,7 +1315,7 @@ with tab4:
         for vi in wijzigingen:
             with st.expander(
                 f"v{vi['versie']} — {vi['datum']}",
-                expanded=(vi["versie"] == "0.4")
+                expanded=(vi["versie"] == "0.5")
             ):
                 for item in vi["items"]:
                     st.markdown(f"- {item}")

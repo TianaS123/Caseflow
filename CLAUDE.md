@@ -35,11 +35,40 @@ source venv/bin/activate
 
 # Virtuele omgeving activeren (Windows)
 venv\Scripts\activate
+```
 
-# Naar GitHub pushen
+---
+
+## Git Workflow
+
+### Branches
+- **`main`** → live app op Streamlit Cloud (alleen stabiele code)
+- **`dev`** → ontwikkel- en testbranch (hier werk je dagelijks)
+
+### Dagelijks werken (op dev)
+```bash
+# Zorg dat je op dev zit
+git checkout dev
+
+# Wijzigingen opslaan en pushen
 git add .
 git commit -m "Beschrijving van wat je hebt gebouwd"
+git push origin dev
+```
+
+### Klaar voor productie (dev → main)
+```bash
+# Schakel naar main
+git checkout main
+
+# Merge dev in main
+git merge dev
+
+# Push naar GitHub → Streamlit Cloud deployt automatisch
 git push origin main
+
+# Terug naar dev voor verder werken
+git checkout dev
 ```
 
 ---
