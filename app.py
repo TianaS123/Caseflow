@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 from uuid import uuid4
 from urllib.parse import quote
@@ -33,9 +34,58 @@ st.set_page_config(
 
 # ── HULPFUNCTIES ──────────────────────────────────────────────────────────────
 
+# BWBR-nummers per wet (voor directe artikel-links op wetten.overheid.nl)
+_BW_BOEK_BWBR = {
+    "1": "BWBR0002656",
+    "2": "BWBR0003045",
+    "3": "BWBR0005291",
+    "4": "BWBR0002761",
+    "5": "BWBR0005288",
+    "6": "BWBR0005289",
+    "7": "BWBR0005290",
+    "8": "BWBR0005287",
+}
+
+_WETBOEK_BWBR = {
+    "Rv":   "BWBR0001827",   # Wetboek van Burgerlijke Rechtsvordering
+    "WvSr": "BWBR0001854",   # Wetboek van Strafrecht
+    "Sr":   "BWBR0001854",
+    "WvSv": "BWBR0001903",   # Wetboek van Strafvordering
+    "Sv":   "BWBR0001903",
+    "Gw":   "BWBR0001840",   # Grondwet
+    "Awb":  "BWBR0005537",   # Algemene wet bestuursrecht
+    "AWB":  "BWBR0005537",
+}
+
+
 def maak_wetsartikel_url(artikel: str) -> str:
-    """Genereert een zoek-URL op wetten.overheid.nl voor een wetsartikel."""
-    zoekterm = artikel.replace(":", " ").strip()
+    """
+    Genereert een directe URL naar het artikel op wetten.overheid.nl.
+    Herkent BW X:Y (bijv. BW 6:162) en andere wetboeken (bijv. Rv 36).
+    Valt terug op zoek-URL als het artikel niet herkend wordt.
+    """
+    tekst = artikel.strip()
+
+    # BW: patroon "6:162" → boek 6, artikel 162
+    if "BW" in tekst:
+        match = re.search(r'(\d+):(\d+)', tekst)
+        if match:
+            boek, nummer = match.group(1), match.group(2)
+            bwbr = _BW_BOEK_BWBR.get(boek)
+            if bwbr:
+                return f"https://wetten.overheid.nl/{bwbr}/2026-01-01#Artikel{nummer}"
+
+    # Andere wetboeken: zoek code + eerste artikelnummer
+    for code, bwbr in _WETBOEK_BWBR.items():
+        if code in tekst:
+            rest = tekst.replace(code, "")
+            match = re.search(r'(\d+[a-z]?)', rest)
+            if match:
+                nummer = match.group(1)
+                return f"https://wetten.overheid.nl/{bwbr}/2026-01-01#Artikel{nummer}"
+
+    # Fallback: zoek-URL
+    zoekterm = tekst.replace(":", " ")
     return f"https://wetten.overheid.nl/zoeken?zoekterm={quote(zoekterm)}"
 
 
