@@ -31,44 +31,73 @@ st.set_page_config(
     layout="wide"
 )
 
-# ── CUSTOM CSS — Editorial Legal Design ──────────────────────────────────────
+# ── CUSTOM CSS — Editorial Legal Design (Light Mode) ────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
 
-/* ── CSS Variabelen ── */
+/* ── CSS Variabelen (Light Mode) ── */
 :root {
+    --cf-bg: #faf8f4;
+    --cf-bg-warm: #f5f1ea;
+    --cf-surface: #ffffff;
+    --cf-surface-alt: #f0ece4;
     --cf-navy: #0a1628;
-    --cf-navy-light: #111d33;
-    --cf-navy-mid: #162240;
-    --cf-gold: #c9a227;
-    --cf-gold-light: #e8c84a;
-    --cf-gold-dim: rgba(201, 162, 39, 0.12);
-    --cf-text: #e8e6e1;
-    --cf-text-muted: #8e99a9;
-    --cf-surface: #0f1a2e;
-    --cf-border: rgba(201, 162, 39, 0.15);
+    --cf-text: #1a2332;
+    --cf-text-muted: #6b7280;
+    --cf-gold: #b8922a;
+    --cf-gold-dark: #96760e;
+    --cf-gold-light: #d4af37;
+    --cf-gold-dim: rgba(184, 146, 42, 0.08);
+    --cf-gold-border: rgba(184, 146, 42, 0.25);
+    --cf-border: #e2ddd4;
     --cf-radius: 12px;
-    --cf-shadow: 0 2px 16px rgba(0,0,0,0.25);
+    --cf-shadow: 0 1px 3px rgba(10, 22, 40, 0.06), 0 4px 12px rgba(10, 22, 40, 0.04);
+    --cf-shadow-hover: 0 2px 8px rgba(10, 22, 40, 0.08), 0 8px 24px rgba(10, 22, 40, 0.06);
 }
 
 /* ── Basis ── */
-.stApp {
-    background: linear-gradient(165deg, var(--cf-navy) 0%, #0d1f3c 40%, var(--cf-navy) 100%) !important;
+.stApp,
+.stApp > header,
+.stApp [data-testid="stAppViewContainer"],
+.stApp [data-testid="stHeader"] {
+    background: var(--cf-bg) !important;
     color: var(--cf-text) !important;
     font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ── Containers ── */
+.main .block-container,
+[data-testid="stMainBlockContainer"],
+[data-testid="stVerticalBlock"],
+[data-testid="stHorizontalBlock"],
+.stForm,
+[data-testid="stForm"] {
+    background: transparent !important;
+    color: var(--cf-text) !important;
+}
+
+/* ── Alle tekst-elementen ── */
+.stApp p, .stApp span, .stApp label, .stApp li,
+.stApp div, .stApp td, .stApp th,
+.stMarkdown p, .stMarkdown span, .stMarkdown li,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stCaptionContainer"] {
+    color: var(--cf-text) !important;
 }
 
 /* ── Typografie ── */
 h1, h2, h3, .stTabs [data-baseweb="tab"] {
     font-family: 'DM Serif Display', serif !important;
-    color: var(--cf-text) !important;
+    color: var(--cf-navy) !important;
     letter-spacing: -0.02em;
 }
 
 h1 {
     font-size: 2.6rem !important;
-    background: linear-gradient(135deg, var(--cf-gold) 0%, var(--cf-gold-light) 100%);
+    background: linear-gradient(135deg, var(--cf-gold-dark) 0%, var(--cf-gold) 50%, var(--cf-gold-dark) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -77,39 +106,72 @@ h1 {
 
 h2 {
     font-size: 1.6rem !important;
-    border-bottom: 2px solid var(--cf-border);
+    color: var(--cf-navy) !important;
+    border-bottom: 2px solid var(--cf-gold-border);
     padding-bottom: 0.4em;
     margin-bottom: 1em;
 }
 
-h3 { font-size: 1.25rem !important; }
+h3 {
+    font-size: 1.25rem !important;
+    color: var(--cf-navy) !important;
+}
 
 p, li, label, .stMarkdown, .stCaption, span {
     font-family: 'DM Sans', sans-serif !important;
 }
 
+/* ── Muted/caption tekst ── */
+.stCaption, [data-testid="stCaptionContainer"],
+small, .stApp small {
+    color: var(--cf-text-muted) !important;
+}
+
 /* ── Sidebar ── */
+section[data-testid="stSidebar"],
+section[data-testid="stSidebar"] > div,
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    background: linear-gradient(180deg, var(--cf-surface) 0%, var(--cf-bg-warm) 100%) !important;
+    color: var(--cf-text) !important;
+}
+
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, var(--cf-navy-light) 0%, var(--cf-navy) 100%) !important;
     border-right: 1px solid var(--cf-border) !important;
+    box-shadow: 2px 0 12px rgba(10, 22, 40, 0.04) !important;
+}
+
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] div {
+    color: var(--cf-text) !important;
 }
 
 section[data-testid="stSidebar"] h1,
 section[data-testid="stSidebar"] h2,
 section[data-testid="stSidebar"] h3 {
-    color: var(--cf-gold) !important;
-    -webkit-text-fill-color: var(--cf-gold) !important;
+    color: var(--cf-gold-dark) !important;
+    -webkit-text-fill-color: var(--cf-gold-dark) !important;
     background: none !important;
     font-size: 1.2rem !important;
 }
 
+/* ── Sidebar input-velden ── */
+section[data-testid="stSidebar"] .stTextInput > div > div,
+section[data-testid="stSidebar"] .stTextInput input {
+    background: var(--cf-surface) !important;
+    color: var(--cf-text) !important;
+    border: 1px solid var(--cf-border) !important;
+}
+
 /* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: var(--cf-navy-mid) !important;
+    background: var(--cf-surface) !important;
     border-radius: var(--cf-radius) !important;
     padding: 4px !important;
     gap: 4px;
     border: 1px solid var(--cf-border) !important;
+    box-shadow: var(--cf-shadow) !important;
 }
 
 .stTabs [data-baseweb="tab"] {
@@ -123,17 +185,13 @@ section[data-testid="stSidebar"] h3 {
 
 .stTabs [aria-selected="true"] {
     background: var(--cf-gold-dim) !important;
-    color: var(--cf-gold) !important;
+    color: var(--cf-gold-dark) !important;
     border-bottom: none !important;
+    font-weight: 600 !important;
 }
 
-.stTabs [data-baseweb="tab-highlight"] {
-    display: none !important;
-}
-
-.stTabs [data-baseweb="tab-border"] {
-    display: none !important;
-}
+.stTabs [data-baseweb="tab-highlight"] { display: none !important; }
+.stTabs [data-baseweb="tab-border"] { display: none !important; }
 
 /* ── Knoppen ── */
 .stButton > button {
@@ -141,32 +199,33 @@ section[data-testid="stSidebar"] h3 {
     font-weight: 600 !important;
     border-radius: 8px !important;
     border: 1px solid var(--cf-border) !important;
-    background: var(--cf-navy-mid) !important;
+    background: var(--cf-surface) !important;
     color: var(--cf-text) !important;
     padding: 0.5rem 1.2rem !important;
     transition: all 0.25s ease !important;
     letter-spacing: 0.01em;
+    box-shadow: var(--cf-shadow) !important;
 }
 
 .stButton > button:hover {
     background: var(--cf-gold-dim) !important;
     border-color: var(--cf-gold) !important;
-    color: var(--cf-gold-light) !important;
+    color: var(--cf-gold-dark) !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(201, 162, 39, 0.15) !important;
+    box-shadow: var(--cf-shadow-hover) !important;
 }
 
 .stButton > button[kind="primary"],
 button[kind="primary"] {
-    background: linear-gradient(135deg, var(--cf-gold) 0%, #b8922a 100%) !important;
-    color: var(--cf-navy) !important;
+    background: linear-gradient(135deg, var(--cf-gold) 0%, var(--cf-gold-dark) 100%) !important;
+    color: #ffffff !important;
     border: none !important;
     font-weight: 700 !important;
 }
 
 .stButton > button[kind="primary"]:hover {
     background: linear-gradient(135deg, var(--cf-gold-light) 0%, var(--cf-gold) 100%) !important;
-    color: var(--cf-navy) !important;
+    color: #ffffff !important;
 }
 
 /* ── Input-velden ── */
@@ -174,74 +233,147 @@ button[kind="primary"] {
 .stTextArea > div > div,
 .stSelectbox > div > div,
 .stMultiSelect > div > div {
-    background: var(--cf-navy-mid) !important;
+    background: var(--cf-surface) !important;
     border: 1px solid var(--cf-border) !important;
     border-radius: 8px !important;
     color: var(--cf-text) !important;
     transition: border-color 0.2s ease !important;
+    box-shadow: inset 0 1px 2px rgba(10, 22, 40, 0.04) !important;
+}
+
+.stTextInput input,
+.stTextArea textarea,
+.stSelectbox select,
+.stMultiSelect input {
+    color: var(--cf-text) !important;
+    background: transparent !important;
+    -webkit-text-fill-color: var(--cf-text) !important;
+}
+
+.stTextInput input::placeholder,
+.stTextArea textarea::placeholder {
+    color: var(--cf-text-muted) !important;
+    -webkit-text-fill-color: var(--cf-text-muted) !important;
+    opacity: 0.6 !important;
+}
+
+/* ── Labels boven input-velden ── */
+.stTextInput label,
+.stTextArea label,
+.stSelectbox label,
+.stMultiSelect label,
+.stSlider label,
+.stRadio label {
+    color: var(--cf-text) !important;
+    font-weight: 500 !important;
 }
 
 .stTextInput > div > div:focus-within,
 .stTextArea > div > div:focus-within {
     border-color: var(--cf-gold) !important;
-    box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.1) !important;
+    box-shadow: 0 0 0 3px rgba(184, 146, 42, 0.1) !important;
 }
 
 /* ── Expanders ── */
+[data-testid="stExpander"],
 .streamlit-expanderHeader {
     font-family: 'DM Serif Display', serif !important;
     font-size: 1.05rem !important;
-    background: var(--cf-navy-mid) !important;
+    background: var(--cf-surface) !important;
     border: 1px solid var(--cf-border) !important;
     border-radius: var(--cf-radius) !important;
     padding: 0.8em 1em !important;
     transition: all 0.2s ease !important;
+    color: var(--cf-text) !important;
+    box-shadow: var(--cf-shadow) !important;
 }
 
-.streamlit-expanderHeader:hover {
-    border-color: var(--cf-gold) !important;
+.streamlit-expanderHeader:hover,
+[data-testid="stExpander"]:hover {
+    border-color: var(--cf-gold-border) !important;
+    box-shadow: var(--cf-shadow-hover) !important;
 }
 
-.streamlit-expanderContent {
-    background: rgba(15, 26, 46, 0.6) !important;
+.streamlit-expanderContent,
+[data-testid="stExpander"] [data-testid="stVerticalBlock"] {
+    background: var(--cf-surface) !important;
     border: 1px solid var(--cf-border) !important;
     border-top: none !important;
     border-radius: 0 0 var(--cf-radius) var(--cf-radius) !important;
     padding: 1em !important;
+    color: var(--cf-text) !important;
 }
 
-/* ── Alerts (success, error, warning, info) ── */
-.stAlert {
+/* ── Expander tekst ── */
+[data-testid="stExpander"] p,
+[data-testid="stExpander"] span,
+[data-testid="stExpander"] li {
+    color: var(--cf-text) !important;
+}
+
+/* ── Alerts ── */
+.stAlert,
+[data-testid="stAlert"] {
     border-radius: 8px !important;
-    border-left: 4px solid var(--cf-gold) !important;
     font-family: 'DM Sans', sans-serif !important;
+    background: var(--cf-surface) !important;
+    box-shadow: var(--cf-shadow) !important;
+}
+
+/* Kleuren per alert-type */
+[data-testid="stAlert"][data-baseweb-alert="success"],
+.stAlert:has([data-testid="stNotificationContentSuccess"]) {
+    border-left: 4px solid #2e7d32 !important;
+}
+[data-testid="stAlert"][data-baseweb-alert="error"],
+.stAlert:has([data-testid="stNotificationContentError"]) {
+    border-left: 4px solid #c62828 !important;
+}
+[data-testid="stAlert"][data-baseweb-alert="warning"],
+.stAlert:has([data-testid="stNotificationContentWarning"]) {
+    border-left: 4px solid var(--cf-gold) !important;
+}
+[data-testid="stAlert"][data-baseweb-alert="info"],
+.stAlert:has([data-testid="stNotificationContentInfo"]) {
+    border-left: 4px solid #1565c0 !important;
+}
+
+.stAlert p, .stAlert span,
+[data-testid="stAlert"] p,
+[data-testid="stAlert"] span {
+    color: var(--cf-text) !important;
 }
 
 /* ── Metrics ── */
 [data-testid="stMetric"] {
-    background: var(--cf-navy-mid) !important;
+    background: var(--cf-surface) !important;
     border: 1px solid var(--cf-border) !important;
     border-radius: var(--cf-radius) !important;
     padding: 1em !important;
     text-align: center;
+    box-shadow: var(--cf-shadow) !important;
 }
 
 [data-testid="stMetricValue"] {
     font-family: 'DM Serif Display', serif !important;
-    color: var(--cf-gold) !important;
+    color: var(--cf-gold-dark) !important;
     font-size: 2rem !important;
+}
+
+[data-testid="stMetricLabel"] {
+    color: var(--cf-text-muted) !important;
 }
 
 /* ── Divider ── */
 hr {
     border-color: var(--cf-border) !important;
-    opacity: 0.5;
+    opacity: 0.6;
 }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: var(--cf-navy); }
-::-webkit-scrollbar-thumb { background: var(--cf-navy-mid); border-radius: 4px; }
+::-webkit-scrollbar-track { background: var(--cf-bg); }
+::-webkit-scrollbar-thumb { background: var(--cf-border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--cf-gold); }
 
 /* ── Radio buttons ── */
@@ -250,15 +382,17 @@ hr {
 }
 
 .stRadio [role="radiogroup"] label {
-    background: var(--cf-navy-mid) !important;
+    background: var(--cf-surface) !important;
     border: 1px solid var(--cf-border) !important;
     border-radius: 8px !important;
     padding: 6px 16px !important;
     transition: all 0.2s ease !important;
+    color: var(--cf-text) !important;
 }
 
 .stRadio [role="radiogroup"] label:hover {
     border-color: var(--cf-gold) !important;
+    background: var(--cf-gold-dim) !important;
 }
 
 /* ── Sliders ── */
@@ -275,7 +409,8 @@ hr {
 .stDownloadButton > button {
     background: var(--cf-gold-dim) !important;
     border: 1px solid var(--cf-gold) !important;
-    color: var(--cf-gold-light) !important;
+    color: var(--cf-gold-dark) !important;
+    font-weight: 600 !important;
 }
 
 /* ── Code blocks ── */
@@ -300,13 +435,13 @@ hr {
     max-width: 1100px;
 }
 
-/* ── Subtiele grain-overlay voor diepte ── */
+/* ── Subtiele papier-textuur voor diepte ── */
 .stApp::before {
     content: '';
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.015'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: 0;
 }
