@@ -853,7 +853,24 @@ with tab3:
 
 # ── TAB 4: ADMIN ──────────────────────────────────────────────────────────────
 
+def _haal_admin_email() -> str:
+    """Haalt het admin e-mailadres op uit st.secrets of .env."""
+    try:
+        return st.secrets["ADMIN_EMAIL"]
+    except Exception:
+        return os.environ.get("ADMIN_EMAIL", "")
+
+
 with tab4:
+    _admin_email = _haal_admin_email()
+    _ingelogd_email = st.session_state.get("auth_email", "")
+
+    if not _admin_email:
+        st.warning("⚠️ ADMIN_EMAIL is niet ingesteld in .env. Voeg het toe om toegang te beperken.")
+    elif not _ingelogd_email or _ingelogd_email.lower() != _admin_email.lower():
+        st.error("🔒 Toegang geweigerd. Deze pagina is alleen voor de beheerder.")
+        st.stop()
+
     st.header("🛠️ Admin & Documentatie")
 
     admin_sectie = st.radio(
