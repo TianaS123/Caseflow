@@ -39,10 +39,65 @@ def maak_wetsartikel_url(artikel: str) -> str:
     return f"https://wetten.overheid.nl/zoeken?zoekterm={quote(zoekterm)}"
 
 
+# Bekende wetboek-codes en hun volledige naam
+_WETBOEK_NAMEN = {
+    "BW": "Burgerlijk Wetboek",
+    "WvSr": "Wetboek van Strafrecht",
+    "Sr": "Wetboek van Strafrecht",
+    "WvSv": "Wetboek van Strafvordering",
+    "Sv": "Wetboek van Strafvordering",
+    "Rv": "Burgerlijke Rechtsvordering",
+    "Gw": "Grondwet",
+    "Awb": "Algemene wet bestuursrecht",
+    "AWB": "Algemene wet bestuursrecht",
+    "WOR": "Wet op de ondernemingsraden",
+    "WW": "Werkloosheidswet",
+    "ROW": "Rijksoctrooiwet",
+    "BBA": "Buitengewoon Besluit Arbeidsverhoudingen",
+}
+
+
+def _parse_wetsartikel(artikel: str) -> dict:
+    """Parseert een wetsartikel-string naar code, wetboeknaam en artikelnummer."""
+    tekst = artikel.strip()
+    for code, naam in _WETBOEK_NAMEN.items():
+        if code in tekst:
+            rest = tekst.replace(code, "").replace("artikel", "").strip(" :-")
+            return {"code": code, "naam": naam, "artikel": rest or tekst}
+    return {"code": "", "naam": "", "artikel": tekst}
+
+
+def _toon_wetsartikelen_grid(wetsartikelen: list):
+    """Toont wetsartikelen in een 3-koloms grid met wetboek-naam en link."""
+    cols = st.columns(3)
+    for idx, artikel in enumerate(wetsartikelen):
+        info = _parse_wetsartikel(artikel)
+        url = maak_wetsartikel_url(artikel)
+        with cols[idx % 3]:
+            if info["naam"]:
+                st.markdown(
+                    f"**{info['code']}** art. {info['artikel']}  \n"
+                    f"<small>{info['naam']}</small>  \n"
+                    f"[↗ wetten.overheid.nl]({url})",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(f"[{artikel}]({url})")
+
+
 def _wis_sessie_volledig():
     """Wist alle session state keys inclusief widget-keys."""
+    auth_keys = {
+        k: st.session_state[k]
+        for k in ["auth_email", "auth_access_token", "auth_refresh_token"]
+        if k in st.session_state
+    }
     for sleutel in list(st.session_state.keys()):
         del st.session_state[sleutel]
+    # Herstel auth-sessie zodat gebruiker ingelogd blijft
+    st.session_state.update(auth_keys)
+    # Expliciet ECLI-invoerveld leegmaken
+    st.session_state["ecli_input"] = ""
 
 
 # ── SIDEBAR: GEBRUIKERSPROFIELEN ──────────────────────────────────────────────
@@ -241,11 +296,7 @@ with tab1:
         wetsartikelen = case_brief.get("wetsartikelen", [])
 
         if wetsartikelen:
-            cols = st.columns(3)
-            for idx, artikel in enumerate(wetsartikelen):
-                with cols[idx % 3]:
-                    url = maak_wetsartikel_url(artikel)
-                    st.markdown(f"🔹 [{artikel}]({url})")
+            _toon_wetsartikelen_grid(wetsartikelen)
         else:
             st.info("Geen wetsartikelen geïdentificeerd.")
 
@@ -499,10 +550,8 @@ with tab2:
 
                 wetsartikelen = brief.get("wetsartikelen", [])
                 if wetsartikelen:
-                    artikelen_links = ", ".join(
-                        [f"[{a}]({maak_wetsartikel_url(a)})" for a in wetsartikelen]
-                    )
-                    st.markdown(f"**Wetsartikelen:** {artikelen_links}")
+                    st.markdown("**Wetsartikelen:**")
+                    _toon_wetsartikelen_grid(wetsartikelen)
 
                 st.divider()
 

@@ -61,9 +61,10 @@ def _maak_supabase_client() -> Client:
 def sla_case_brief_op(case_brief: dict) -> dict:
     """
     Slaat een case brief op in Supabase (upsert op ECLI).
-    
+
     Als dezelfde ECLI al bestaat, wordt het geüpdatet.
-    
+    Vereist een ingelogde gebruiker (RLS).
+
     Args:
         case_brief: Dict met volgende velden:
             - ecli (verplicht): ECLI-nummer
@@ -72,7 +73,7 @@ def sla_case_brief_op(case_brief: dict) -> dict:
             - wetsartikelen: List van wetsartikelen
             - eigen_tags: List van tags (optioneel)
             - eigen_notities: User notities (optioneel)
-    
+
     Returns:
         {"succes": True, "data": opgeslagen_record} of
         {"succes": False, "fout": "begrijpelijke melding"}
@@ -80,13 +81,26 @@ def sla_case_brief_op(case_brief: dict) -> dict:
     # Validatie: verplichte velden
     if not case_brief.get("ecli"):
         return {"succes": False, "fout": "ECLI-nummer is verplicht."}
-    
+
     if not case_brief.get("titel"):
         return {"succes": False, "fout": "Titel is verplicht."}
-    
+
     try:
-        client = _maak_supabase_client()
-        
+        client = _maak_auth_client()
+
+        # Haal ingelogde gebruiker op (vereist voor RLS)
+        try:
+            user_response = client.auth.get_user()
+            user_id = user_response.user.id if user_response and user_response.user else None
+        except Exception:
+            user_id = None
+
+        if not user_id:
+            return {
+                "succes": False,
+                "fout": "Je moet ingelogd zijn om uitspraken op te slaan. Log in via de zijbalk."
+            }
+
         # Zet defaults voor optionele velden
         data_to_save = {
             "ecli": case_brief.get("ecli"),
@@ -100,8 +114,9 @@ def sla_case_brief_op(case_brief: dict) -> dict:
             "wetsartikelen": case_brief.get("wetsartikelen", []),
             "eigen_tags": case_brief.get("eigen_tags", []),
             "eigen_notities": case_brief.get("eigen_notities", ""),
+            "user_id": user_id,
         }
-        
+
         # Upsert: update als ECLI al bestaat, anders insert
         response = client.table(TABEL).upsert(
             data_to_save,
@@ -155,8 +170,8 @@ def haal_case_briefs_op(
         {"succes": False, "fout": "begrijpelijke melding"}
     """
     try:
-        client = _maak_supabase_client()
-        
+        client = _maak_auth_client()
+
         # Start met basis query
         query = client.table(TABEL).select("*")
         
@@ -225,7 +240,7 @@ def haal_case_brief_op_ecli(ecli: str) -> dict:
         return {"succes": False, "fout": "ECLI-nummer is verplicht."}
 
     try:
-        client = _maak_supabase_client()
+        client = _maak_auth_client()
         response = (
             client.table(TABEL)
             .select("*")
@@ -252,11 +267,11 @@ def haal_alle_tags_op() -> dict:
         {"succes": False, "fout": "..."}
     """
     try:
-        client = _maak_supabase_client()
-        
+        client = _maak_auth_client()
+
         # Haal alle case briefs met tags
         response = client.table(TABEL).select("eigen_tags").execute()
-        
+
         # Verzamel alle unieke tags
         alle_tags = set()
         for record in response.data:
@@ -287,7 +302,7 @@ def haal_top_tags_op(limit: int = 5) -> dict:
         {"succes": False, "fout": "..."}
     """
     try:
-        client = _maak_supabase_client()
+        client = _maak_auth_client()
         response = client.table(TABEL).select("eigen_tags").execute()
 
         # Tel frequentie van elke tag
@@ -441,7 +456,7 @@ def verwijder_case_brief(ecli: str) -> dict:
         {"succes": False, "fout": "..."}
     """
     try:
-        client = _maak_supabase_client()
+        client = _maak_auth_client()
 
         response = client.table(TABEL).delete().eq("ecli", ecli).execute()
         
